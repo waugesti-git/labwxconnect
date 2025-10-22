@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>IMI Chat Widget (Improved)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* Optional: styles for the placeholder container so it doesn't collapse */
+    #divicw {
+      display: inline-block;
+      min-width: 1px;
+      min-height: 1px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Widget placeholder -->
+  <div id="divicw" data-bind="17BF2678-5367-4914-B19B-427BD26747B3" data-org=""></div>
+
+  <script>
+  (function () {
+    'use strict';
+
+    const container = document.getElementById('divicw');
+    if (!container) {
+      console.error('IMI widget container not found (id="divicw").');
+      return;
+    }
+
+    const REMOTE_SCRIPT_URL = 'https://media.imi.chat/widget/js/imichatinit.js';
+    const IFRAME_ID = 'tls_al_frm';
+
+    /**
+     * Try to load the remote widget script by inserting a <script src=...>.
+     * If loading fails, fall back to showing the friendly iframe message.
+     */
+    function loadRemoteScript() {
+      try {
+        const script = document.createElement('script');
+        script.src = REMOTE_SCRIPT_URL;
+        script.async = true;
+
+        // If the remote script fails to load, show the fallback UI.
+        script.addEventListener('error', function () {
+          console.warn('Failed to load remote widget script:', REMOTE_SCRIPT_URL);
+          showFallbackIframe();
+        });
+
+        // As a safety: set a timeout in case the remote server hangs (optional).
+        const timeout = setTimeout(() => {
+          // If script hasn't fired load/error in 10s, assume problem.
+          if (!script.dataset.loaded) {
+            script.dispatchEvent(new Event('error'));
+          }
+        }, 10000);
+
+        script.addEventListener('load', function () {
+          script.dataset.loaded = '1';
+          clearTimeout(timeout);
+        });
+
+        // Insert the script after the container element.
+        container.parentNode.insertBefore(script, container.nextSibling);
+      } catch (err) {
+        console.error('Error while trying to load remote script:', err);
+        showFallbackIframe();
+      }
+    }
+
+    /**
+     * Create a small fixed-position iframe that contains a user-friendly message
+     * instructing the user to update their browser. The iframe content is created
+     * with srcdoc (safer than writing into the iframe document).
+     */
+    function showFallbackIframe() {
+      // If already present, do nothing.
+      if (document.getElementById(IFRAME_ID)) return;
+
+      const iframe = document.createElement('iframe');
+      iframe.id = IFRAME_ID;
+      iframe.setAttribute('frameborder', '0');
+      iframe.setAttribute('aria-hidden', 'false');
+      iframe.style.position = 'fixed';
+      iframe.style.right = '48px';
+      iframe.style.bottom = '12px';
+      iframe.style.width = '394px';
+      iframe.style.maxWidth = 'calc(100% - 96px)';
+      iframe.style.height = '208px';
+      iframe.style.zIndex = '99999';
+      iframe.style.border = '0';
+      iframe.style.boxShadow = '0 8px 24px rgba(32, 38, 52, 0.16)';
+      iframe.style.borderRadius = '8px';
+      iframe.style.background = 'transparent';
+      iframe.style.overflow = 'hidden';
+      iframe.style.display = 'block';
+
+      // Build the HTML for the iframe using srcdoc.
+      // Note: we escape the closing </script> tag to avoid prematurely ending the parent script.
+      iframe.srcdoc = `
+        <!doctype html>
+        <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <title>Browser Update Required</title>
+          <style>
+            :root {
+              --bg: #fbfbfe;
+              --text: #56627c;
+              --muted: #99a0b0;
+              --accent: #005cde;
+            }
+            html,body {
+              margin: 0;
+              padding: 0;
+              font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+              background: transparent;
+              color: var(--muted);
+              -webkit-font-smoothing: antialiased;
+              -moz-osx-font-smoothing: grayscale;
+            }
+            .popover__content {
+              background: var(--bg);
+              padding: 1rem;
+              border-radius: 8px;
+              width: 100%;
+              height: 100%;
+              box-sizing: border-box;
+              display: flex;
+              flex-direction: column;
+              gap: 0.5rem;
+            }
+            .header {
+              display: flex;
+              align-items: center;
+              gap: 0.75rem;
+            }
+            .popover__message {
+              font-weight: 700;
+              color: var(--text);
+              font-size: 16px;
+              line-height: 1.2;
+              flex: 0 0 auto;
+            }
+            .details {
+              color: var(--muted);
+              font-size: 13px;
+              line-height: 1.4;
+            }
+            .actions {
+              margin-top: auto;
+              display: flex;
+              gap: 0.5rem;
+              align-items: center;
+              justify-content: flex-start;
+            }
+            .btn {
+              background: var(--accent);
+              color: #fff;
+              padding: 8px 12px;
+              border-radius: 6px;
+              text-decoration: none;
+              font-size: 13px;
+              font-weight: 600;
+              display: inline-block;
+            }
+            .btn--link {
+              background: transparent;
+              color: var(--text);
+              padding: 6px 8px;
+              font-weight: 600;
+              text-decoration: underline;
+            }
+            .close-btn {
+              margin-left: auto;
+              background: transparent;
+              border: none;
+              color: var(--muted);
+              font-size: 16px;
+              cursor: pointer;
+            }
+            @media (max-width: 420px) {
+              .popover__content { padding: 12px; }
+              .popover__message { font-size: 15px; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="popover__content" role="dialog" aria-labelledby="tls-title" aria-describedby="tls-desc">
+            <div class="header" role="presentation">
+              <div class="popover__message" id="tls-title">This browser version is not supported by LiveChat.</div>
+              <button class="close-btn" aria-label="Close" onclick="closeTLSAlert()">✕</button>
+            </div>
+
+            <div class="details" id="tls-desc">
+              Please update your browser to the latest version and re-open the website to access the chat widget.
+            </div>
+
+            <div class="actions">
+              <a class="btn" href="https://browsehappy.com/" target="_blank" rel="noopener noreferrer">Update Browser</a>
+              <a class="btn btn--link" href="#" onclick="closeTLSAlert();return false;">Dismiss</a>
+            </div>
+          </div>
+
+          <script>
+            function closeTLSAlert() {
+              // Post a message to the parent window to request the parent remove the iframe.
+              try {
+                window.parent.postMessage({ action: "close_tls_alert" }, "*");
+              } catch (e) {
+                // If postMessage is blocked, just hide in-iframe content as a fallback.
+                document.body.style.display = 'none';
+              }
+            }
+            // Also listen for a message from the parent to close (optional).
+            window.addEventListener('message', function (ev) {
+              if (ev && ev.data && ev.data.action === 'close_tls_alert_parent') {
+                // simple visual feedback inside the iframe
+                document.body.style.display = 'none';
+              }
+            }, false);
+          <\/script>
+        </body>
+        </html>
+      `;
+
+      // Insert iframe after container
+      container.parentNode.insertBefore(iframe, container.nextSibling);
+
+      // Listen for the close message from iframe
+      function onMessage(event) {
+        try {
+          if (!event || !event.data) return;
+          if (event.data.action === 'close_tls_alert') {
+            removeFallbackIframe();
+          }
+        } catch (err) {
+          // ignore
+        }
+      }
+
+      window.addEventListener('message', onMessage, false);
+
+      // Clean-up helper: remove iframe and listener
+      function removeFallbackIframe() {
+        const existing = document.getElementById(IFRAME_ID);
+        if (existing && existing.parentNode) {
+          existing.parentNode.removeChild(existing);
+        }
+        window.removeEventListener('message', onMessage, false);
+      }
+
+      // Expose removal so other code can remove it if needed
+      // (not polluting global namespace excessively)
+      iframe.removeFallbackIframe = removeFallbackIframe;
+    }
+
+    // Start loading the remote widget script
+    loadRemoteScript();
+
+    // Expose a small API in case page wants to force the fallback
+    // (attached to the container so it is scoped and discoverable)
+    container.imichat = {
+      showFallback: showFallbackIframe
+    };
+
+  })();
+  </script>
+
+</body>
+</html>
